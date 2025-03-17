@@ -1,15 +1,16 @@
 "use client";
 
 import Loader from '@/components/Loader';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 
 interface AppProviderType {
-  isLoading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  isLoading: boolean,
+  authToken: string | null,
+  login: (username: string, password: string) => Promise<void>,
   register: (
     email: string,
     username: string,
@@ -17,16 +18,27 @@ interface AppProviderType {
     first_name: string,
     last_name: string,
     phone: string,
-  ) => Promise<void>;
+  ) => Promise<void>
+  logout  : () => void
 }
 
 const AppContext = createContext<AppProviderType|undefined>(undefined)
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}`
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
     const [authToken, setAuthToken] = useState<string|null>(null);
     const router = useRouter();
+
+    useEffect( () => {
+       const token = Cookies.get("authToken");
+       if(token){
+         setAuthToken(token)
+       }else{
+         router.push("/auth");
+       }
+       setIsLoading(false)
+    })
 
     const login = async(username:string, password:string) =>{debugger;
         setIsLoading(true);
@@ -36,10 +48,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
             password
            });
 
-           if(response.data.status){debugger;
-             Cookies.set("authToken",response.data.token)
+           if(response.data.success){debugger;
+             Cookies.set("authToken",response.data.data.token)
              toast.success("Your account have been Login Successfuly")
-             setAuthToken(response.data.token)
+             setAuthToken(response.data.data.token)
              router.push('/dashboard')
            }else{
             toast.error("Invalid email or password!")
@@ -63,15 +75,28 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
                 last_name,
                 phone
             });
-    
+
+            if(response.data.success){debugger;
+              toast.success("Account registered Successfuly")
+            }else{
+             toast.error("Error account registed!")
+            }
             console.log(response)
         } finally {
           setIsLoading(false);
         }
     }
 
+    const logout = () =>{
+      setAuthToken(null)
+      Cookies.remove("authToken")
+      setIsLoading(false)
+      toast.success("Logged out successfully!")
+      router.push('/auth')
+    }
+
     return (
-        <AppContext.Provider value={{ isLoading, login, register }}>
+        <AppContext.Provider value={{ isLoading, login, register, authToken, logout}}>
          {isLoading ? <Loader /> :children}
         </AppContext.Provider>
       );

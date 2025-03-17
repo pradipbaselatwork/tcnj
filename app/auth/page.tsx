@@ -1,7 +1,8 @@
 "use client";
 
 import { myAppHook } from "@/context/AppProvider";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from 'next/navigation';
 
 interface FormData {
   username: string;
@@ -13,7 +14,7 @@ interface FormData {
 }
 
 const Auth: React.FC = () => {
-  const [isLogin, setIsLogin] = useState<boolean>(false);
+  const [isLogin, setIsLogin] = useState<boolean>(true);
   const [formdata, setFormData] = useState<FormData>({
     username: "",
     email: "",
@@ -23,8 +24,17 @@ const Auth: React.FC = () => {
     phone: "",
   });
 
+  const router = useRouter();
+
   // Use the context hook
-  const { login, register } = myAppHook();
+  const { login, register, authToken, isLoading} = myAppHook();
+  
+  useEffect( () =>{
+     if(authToken){
+         router.push("/dashboard")
+         return
+     }
+  },[authToken, isLoading])
 
   // Handle input changes
   const handleOnChangeInput = (
